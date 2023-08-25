@@ -22,10 +22,11 @@
     "headers": "EnjoyRemote.h",
     "examples": [
         {
-            "name": "cliCC1101",
+            "name": "CLI Remote with CC1101",
             "base": "examples/cliCC1101",
             "files": [
-                "examples/cliCC1101/cliCC1101.ino"
+                "cliCC1101.ino",
+                "platformio.ini"
             ]
         }
     ]
