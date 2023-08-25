@@ -1,16 +1,13 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Preferences.h>
 
-enum class Command : byte {
+enum class EnjoyCommand : byte {
   Up = 0x8,
   Stop = 0x4,
   Down = 0x2,
   Prog = 0x1,
 };
-
-Preferences enjoyPreferences;
 
 class EnjoyRemote {
 private:
@@ -20,7 +17,7 @@ private:
 
   uint8_t nextCode();
 
-  void buildFrame(byte* frame, Command command, uint8_t code, uint8_t selectedBlind, bool multicast);
+  void buildFrame(byte* frame, EnjoyCommand command, uint8_t code, uint8_t selectedBlind, bool multicast);
   void sendFrame(byte* frame, bool first);
   void printFrame(byte* frame);
 
@@ -38,7 +35,7 @@ public:
 	 * @param repeat the number how often the command should be repeated, default 0. Should
 	 * 				 only be used when simulating holding a button.
 	 */
-  void sendCommand(Command command, uint8_t selectedBlind, int repeat = 0, bool multicast = false);
+  void sendCommand(EnjoyCommand command, uint8_t selectedBlind, int repeat = 0, bool multicast = false);
 };
 
-Command getEnjoyCommand(const String& string);
+EnjoyCommand getEnjoyCommand(const String& string);

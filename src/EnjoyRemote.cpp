@@ -1,6 +1,9 @@
 #include "EnjoyRemote.h"
+#include <Preferences.h>
 
 #define ENJOY_SYMBOL_US 408
+
+Preferences enjoyPreferences;
 
 EnjoyRemote::EnjoyRemote(byte emitterPin, uint32_t remoteId, const char* rollingCodeStorageKey)
     : emitterPin(emitterPin), remoteId(remoteId), rollingCodeStorageKey(rollingCodeStorageKey) {}
@@ -24,7 +27,7 @@ void EnjoyRemote::setCode(uint8_t code) {
   enjoyPreferences.end();
 }
 
-void EnjoyRemote::sendCommand(Command command, uint8_t selectedBlind, int repeat, bool multicast) {
+void EnjoyRemote::sendCommand(EnjoyCommand command, uint8_t selectedBlind, int repeat, bool multicast) {
   const uint8_t rollingCode = this->nextCode();
   byte frame[7];
   buildFrame(frame, command, rollingCode, selectedBlind, multicast);
@@ -45,7 +48,7 @@ void EnjoyRemote::printFrame(byte* frame) {
   Serial.println();
 }
 
-void EnjoyRemote::buildFrame(byte* frame, Command command, uint8_t code, uint8_t selectedBlind, bool multicast) {
+void EnjoyRemote::buildFrame(byte* frame, EnjoyCommand command, uint8_t code, uint8_t selectedBlind, bool multicast) {
   const byte button = static_cast<byte>(command);
   if (multicast) {
     frame[0] = 0x0f;
@@ -134,16 +137,16 @@ void EnjoyRemote::sendLow(uint16_t durationInMicroseconds) {
   delayMicroseconds(durationInMicroseconds);
 }
 
-Command getEnjoyCommand(const String& string) {
+EnjoyCommand getEnjoyCommand(const String& string) {
   if (string.equalsIgnoreCase("Up")) {
-    return Command::Up;
+    return EnjoyCommand::Up;
   } else if (string.equalsIgnoreCase("Stop")) {
-    return Command::Stop;
+    return EnjoyCommand::Stop;
   } else if (string.equalsIgnoreCase("Down")) {
-    return Command::Down;
+    return EnjoyCommand::Down;
   } else if (string.equalsIgnoreCase("Prog")) {
-    return Command::Prog;
+    return EnjoyCommand::Prog;
   } else {
-    return Command::Stop;
+    return EnjoyCommand::Stop;
   }
 }

@@ -15,7 +15,7 @@ void setup() {
   ELECHOUSE_cc1101.setMHZ(CC1101_FREQUENCY);
 }
 
-void sendCC1101Command(EnjoyRemote::Command command) {
+void sendCC1101Command(EnjoyCommand command) {
   ELECHOUSE_cc1101.SetTx();
   enjoyRemote.sendCommand(command, SELECTED_BLIND);
   ELECHOUSE_cc1101.setSidle();
@@ -32,7 +32,7 @@ void loop() {
       enjoyRemote.setCode(strtol(string.substring(8).c_str(), 0, 16));
     } else {
       // #if the user writes "up", the Up command will be sent
-      const EnjoyRemote::command = getEnjoyCommand(string);
+      const EnjoyCommand command = getEnjoyCommand(string);
       digitalWrite(LED_GPIO, HIGH);
       sendCC1101Command(command);
       digitalWrite(LED_GPIO, LOW);
