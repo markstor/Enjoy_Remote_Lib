@@ -1,11 +1,6 @@
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include <EnjoyRemote.h>
 
-#define EMITTER_GPIO     4
-#define LED_GPIO         2
-#define EEPROM_ADDRESS   0
-#define REMOTE_ADDRESS   0x106
-#define SELECTED_BLIND   3
 #define CC1101_FREQUENCY 433.92
 
 EnjoyRemote enjoyRemote(EMITTER_GPIO, REMOTE_ADDRESS, "mando1");
@@ -33,9 +28,11 @@ void loop() {
     Serial.printf("Read command: %s \n", string);
 #endif
     if (string.startsWith("counter:")) {
+      //if the user writes "counter:0x40", the counter will be set to 0x40
       enjoyRemote.setCode(strtol(string.substring(8).c_str(), 0, 16));
     } else {
-      const Command command = getEnjoyCommand(string);
+      // #if the user writes "up", the Up command will be sent
+      const EnjoyRemote::command = getEnjoyCommand(string);
       digitalWrite(LED_GPIO, HIGH);
       sendCC1101Command(command);
       digitalWrite(LED_GPIO, LOW);
