@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Preferences.h>
 
 enum class EnjoyCommand : byte {
   Up = 0x8,
