@@ -12,7 +12,7 @@ void EnjoyRemote::setup() {
   digitalWrite(emitterPin, LOW);
 }
 
-uint8_t EnjoyRemote::nextCode(void) {
+uint8_t EnjoyRemote::nextCode() {
   enjoyPreferences.begin("EnjoyCodes", false);
   uint8_t newValue = enjoyPreferences.getUChar(this->rollingCodeStorageKey, 0) + 1;
   enjoyPreferences.putUChar(this->rollingCodeStorageKey, newValue);
@@ -24,6 +24,13 @@ void EnjoyRemote::setCode(uint8_t code) {
   enjoyPreferences.begin("EnjoyCodes", false);
   enjoyPreferences.putUChar(this->rollingCodeStorageKey, code);
   enjoyPreferences.end();
+}
+
+uint8_t EnjoyRemote::getCurrentCode() {
+  enjoyPreferences.begin("EnjoyCodes", false);
+  uint8_t currentValue = enjoyPreferences.getUChar(this->rollingCodeStorageKey, 0);
+  enjoyPreferences.end();
+  return currentValue;
 }
 
 void EnjoyRemote::sendCommand(EnjoyCommand command, uint8_t selectedBlind, int repeat, bool multicast) {
