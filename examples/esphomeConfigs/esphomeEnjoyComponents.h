@@ -1,6 +1,6 @@
+#include "esphome.h"
 #include <EnjoyRemote.h>
 
-#include "esphome.h"
 
 #define EMITTER_GPIO   4
 #define CC1101_FREQUENCY 433.42
