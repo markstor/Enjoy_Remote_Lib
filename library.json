@@ -1,15 +1,20 @@
 {
     "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
     "name": "EnjoyRemoteLib",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Emulate an Enjoy Motors remote to control blinds",
     "keywords": "enjoy,motors,blinds,remote,EMSTEEL",
     "repository": {
         "type": "git",
         "url": "https://github.com/markstor/Enjoy_Remote_Lib"
     },
-    "platforms": ["espressif8266","espressif32"],
-    "frameworks": ["arduino"],
+    "platforms": [
+        "espressif8266",
+        "espressif32"
+    ],
+    "frameworks": [
+        "arduino"
+    ],
     "authors": {
         "name": "Marc Casalprim"
     },
@@ -17,10 +22,10 @@
     "headers": "EnjoyRemote.h",
     "examples": [
         {
-            "name": "CLI Remote with CC1101",
+            "name": "cliCC1101",
             "base": "examples/cliCC1101",
             "files": [
-                "platformio.ini"
+                "examples/cliCC1101/cliCC1101.ino"
             ]
         }
     ]
