@@ -70,22 +70,17 @@ void EnjoyRemote::buildFrame(byte* frame, EnjoyCommand command, uint8_t code, ui
   frame[5] = xor_value ^ code; // Remote address
 
   // remainder calculation: CRC8 with 0x80 polynomial
-  uint8_t remainder = 0xff;
+  uint8_t remainder = 0x00;
   unsigned byte, bit;
-
-  Serial.printf("fxor: 0x%2x\n", 0xff ^ frame[0]);
-
-  for (byte = 0; byte < 7; ++byte) {
+  for (byte = 0; byte < 6; ++byte) {
     remainder ^= frame[byte];
-    Serial.printf("preremainder: 0x%2x\n", remainder);
     for (bit = 0; bit < 8; ++bit) {
       if (remainder & 0x80) {
-        remainder = (remainder << 1) ^ 0x80;
+        remainder = (remainder << 1) ^ 0x07;
       } else {
         remainder = (remainder << 1);
       }
     }
-    Serial.printf("remainder:    0x%2x\n", remainder);
   }
 
   frame[6] = remainder; // CRC8 of previous bytes

@@ -29,6 +29,7 @@ public:
   EnjoyRemote(byte emitterPin, uint32_t remote, const char* rollingCodeStorageKey);
   void setup();
   void setCode(uint8_t code);
+  uint8_t getCurrentCode();
   /**
 	 * Send a command with this EnjoyRemote.
 	 *

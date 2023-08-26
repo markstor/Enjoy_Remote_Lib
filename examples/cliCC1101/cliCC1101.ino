@@ -3,7 +3,7 @@
 
 #define CC1101_FREQUENCY 433.92
 
-EnjoyRemote enjoyRemote(EMITTER_GPIO, REMOTE_ADDRESS, "mando1");
+EnjoyRemote enjoyRemote(EMITTER_GPIO, REMOTE_ADDRESS, "mandoEnjoy");
 
 void setup() {
   Serial.begin(115200);
@@ -31,7 +31,7 @@ void loop() {
       //if the user writes "counter:0x40", the counter will be set to 0x40
       enjoyRemote.setCode(strtol(string.substring(8).c_str(), 0, 16));
     } else {
-      // #if the user writes "up", the Up command will be sent
+      // if the user writes "up", the Up command will be sent
       const EnjoyCommand command = getEnjoyCommand(string);
       digitalWrite(LED_GPIO, HIGH);
       sendCC1101Command(command);

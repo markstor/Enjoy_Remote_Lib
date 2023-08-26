@@ -3,14 +3,29 @@ esphome:
   friendly_name: ShadowsLord
   libraries:
     - Preferences
-    - casalprim/EnjoyRemoteLib@^1.2.1
+    - SPI
+    - SmartRC-CC1101-Driver-Lib@2.5.6
+    - EnjoyRemoteLib@^1.2.2
   includes:
+    - remotesSecrets.h
     - esphomeEnjoyComponents.h
 
 esp32:
   board: esp32dev
   framework:
     type: arduino
+
+# Enable logging
+logger:
+  
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  password: !secret ota_password
+
 
 wifi:
   ssid: !secret wifi_ssid
@@ -23,24 +38,10 @@ wifi:
 
 captive_portal:
 
-# Enable logging
-logger:
-
-# Enable Home Assistant API
-api:
-  encryption:
-    key: !secret api_key
-
-ota:
-  password: !secret ota_password
-
-captive_portal:
-    
-
 cover:
   - platform: custom
     lambda: |-
-      auto enjoy_remote = new SomfyESPRemote(ENJOY_REMOTE_ADDRESS);
+      auto enjoy_remote = new EnjoyESPRemote(ENJOY_REMOTE_ADDRESS);
       enjoy_remote->add_cover(0);
       enjoy_remote->add_cover(1);
       enjoy_remote->add_cover(2);
@@ -63,7 +64,7 @@ switch:
     name: "PROG"
     turn_on_action:
       - lambda: |-
-          ((EnjoyESPCover*)id(enjoy))->remote->program();
+          ((EnjoyESPCover*)id(enjoy))->program();
 
 number:
   - platform: template
@@ -73,8 +74,8 @@ number:
     id: "counter"
     name: "Remote Counter"
     lambda: |-
-        ((EnjoyESPCover*)id(enjoy))->remote->getCurrentCode();
+        return ((EnjoyESPCover*)id(enjoy))->remote->enjoyRemote.getCurrentCode();
     set_action:
       then:
         lambda: |-
-          ((EnjoyESPCover*)id(enjoy))->remote->setCode(id(counter).state);
+          ((EnjoyESPCover*)id(enjoy))->remote->enjoyRemote.setCode(x);
