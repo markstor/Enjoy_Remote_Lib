@@ -98,14 +98,14 @@ void EnjoyRemote::sendFrame(byte* frame, bool first) {
     nSyncs = 64;
   }
 
-  // Hardware sync: two sync for the first frame, seven for the following ones.
+  // Hardware sync: 64 syncs for the first frame, 24 for the following ones.
   for (int i = 0; i < nSyncs; i++) {
     sendHigh(ENJOY_SYMBOL_US);
     sendLow(ENJOY_SYMBOL_US);
   }
 
-  sendLow(3546);
   // Software sync
+  sendLow(3546);
   sendHigh(ENJOY_SYMBOL_US);
   sendLow(830);
   sendHigh(ENJOY_SYMBOL_US);
@@ -116,7 +116,7 @@ void EnjoyRemote::sendFrame(byte* frame, bool first) {
   }
 
   // Data: bits are sent one by one, starting with the MSB.
-  // With G.E. Thomas Manchester Encoding
+  // With G.E. Thomas convention of Manchester Encoding (0 is a transition from low to high)
   for (byte i = 0; i < 56; i++) {
     if (((frame[i / 8] >> (7 - (i % 8))) & 1) == 0) {
       sendLow(ENJOY_SYMBOL_US);

@@ -28,7 +28,7 @@ void loop() {
     Serial.printf("Read command: %s \n", string);
 #endif
     if (string.startsWith("counter:")) {
-      //if the user writes "counter:0x40", the counter will be set to 0x40
+      //if the user writes "counter:40", the counter will be set to 0x40
       enjoyRemote.setCode(strtol(string.substring(8).c_str(), 0, 16));
     } else {
       // if the user writes "up", the Up command will be sent

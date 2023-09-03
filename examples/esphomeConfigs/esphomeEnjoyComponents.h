@@ -3,8 +3,8 @@
 
 #include "esphome.h"
 
-#define EMITTER_GPIO     4
-#define CC1101_FREQUENCY 433.42
+#define EMITTER_GPIO     16
+#define CC1101_FREQUENCY 433.92
 
 #define COVER_OPEN   1.0f
 #define COVER_CLOSED 0.0f
@@ -21,7 +21,7 @@ public:
 
   EnjoyESPRemote(uint32_t address)
       : Component(),
-        enjoyRemote(EMITTER_GPIO, address, "mandoUniversalEnjoy") {}
+        enjoyRemote(EMITTER_GPIO, address, "mandoEnjoy") {}
 
   void setup() override {
     pinMode(EMITTER_GPIO, OUTPUT);
