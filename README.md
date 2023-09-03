@@ -5,8 +5,6 @@ This project is an Arduino Library able to emulate an Enjoy Motors remote contro
 It was entirely developed by reverse engineering an EMSTEEL4, I have not tested it on any other scenario.
 Because it is a Arduino Library it can easily included in existing projects or used standalone.
 
-If you want to learn more about the Somfy RTS protocol, check out [Pushtack](https://pushstack.wordpress.com/somfy-rts-protocol/).
-
 ### Hardware Requirements
 
 For this library to work you need an 433.92 Mhz RF transmitter. I have only tested it with a CC1101 module, I recommned it because there is a lot of other projects that use it, and it can be tuned to other frequencies as well (useful if you also want to control Somfy RTS devices).
