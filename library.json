@@ -3,7 +3,7 @@
     "name": "EnjoyRemoteLib",
     "version": "2.1.2",
     "description": "Emulate an Enjoy Motors remote to control blinds",
-    "keywords": "enjoy,motors,blinds,remote,EMSTEEL",
+    "keywords": "enjoy,motors,blinds,remote,EMSTEEL,esp32,arduino",
     "repository": {
         "type": "git",
         "url": "https://github.com/markstor/Enjoy_Remote_Lib"
