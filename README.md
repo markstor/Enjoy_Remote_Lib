@@ -7,7 +7,7 @@ Because it is a Arduino Library it can easily included in existing projects or u
 
 ### Hardware Requirements
 
-For this library to work you need an 433.92 Mhz RF transmitter. I have only tested it with a CC1101 module, I recommned it because there is a lot of other projects that use it, and it can be tuned to other frequencies as well (useful if you also want to control Somfy RTS devices).
+For this library to work you need an 433.92 Mhz RF transmitter. I have only tested it with a CC1101 module, I recommned it because there is a lot of other projects that use it, and it can be tuned to other frequencies as well.
 For the CC1101 module the [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib) must be installed.
 
 ### Usage
@@ -37,7 +37,7 @@ Then, this number is XORed by some info of the frame sent.
 
 I have not written yet a complete description of the protocol, but the source code of the [buildFrame](https://github.com/markstor/Enjoy_Remote_Lib/blob/main/src/EnjoyRemote.cpp#L57) and [sendFrame](https://github.com/markstor/Enjoy_Remote_Lib/blob/main/src/EnjoyRemote.cpp#L95) functions should be enough to follow it.
 
-#### Register the Somfy Remote
+#### Register the remote
 
 Before the emulated remote can control the devices, the remote must be registered.
 Therefore you can refer to the original manual of your Enjoy Motors device.
