@@ -39,7 +39,7 @@ void EnjoyRemote::sendCommand(EnjoyCommand command, uint8_t selectedBlind, int r
   buildFrame(frame, command, rollingCode, selectedBlind, multicast);
   sendFrame(frame, true);
   for (int i = 0; i < repeat; i++) {
-    sendFrame(frame, 7);
+    sendFrame(frame, false);
   }
 }
 
