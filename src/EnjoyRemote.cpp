@@ -1,6 +1,6 @@
 #include <EnjoyRemote.h>
 
-#define ENJOY_SYMBOL_US 408
+#define ENJOY_SYMBOL_US 405
 
 Preferences enjoyPreferences;
 
@@ -93,9 +93,9 @@ void EnjoyRemote::buildFrame(byte* frame, EnjoyCommand command, uint8_t code, ui
 }
 
 void EnjoyRemote::sendFrame(byte* frame, bool first) {
-  int nSyncs = 24;
+  int nSyncs = 23;
   if (first) { // The syncs are longer only with the first frame.
-    nSyncs = 64;
+    nSyncs = 60;
   }
 
   // Hardware sync: 64 syncs for the first frame, 24 for the following ones.
@@ -105,10 +105,9 @@ void EnjoyRemote::sendFrame(byte* frame, bool first) {
   }
 
   // Software sync
-  sendLow(3546);
+  sendLow(4000-ENJOY_SYMBOL_US);
   sendHigh(ENJOY_SYMBOL_US);
-  sendLow(830);
-  sendHigh(ENJOY_SYMBOL_US);
+  sendLow(830-ENJOY_SYMBOL_US);
 
   for (byte i = 0; i < 7; i++) {
     sendLow(ENJOY_SYMBOL_US);
