@@ -1,6 +1,6 @@
 #include <EnjoyRemote.h>
 
-#define ENJOY_SYMBOL_US 405
+#define ENJOY_SYMBOL_US 418
 
 Preferences enjoyPreferences;
 
@@ -35,16 +35,17 @@ uint8_t EnjoyRemote::getCurrentCode() {
 
 void EnjoyRemote::sendCommand(EnjoyCommand command, uint8_t selectedBlind, int repeat, bool multicast) {
   const uint8_t rollingCode = this->nextCode();
-  byte frame[7];
+  byte frame[8];
   buildFrame(frame, command, rollingCode, selectedBlind, multicast);
   sendFrame(frame, true);
   for (int i = 0; i < repeat; i++) {
+    sendLow(26800);
     sendFrame(frame, false);
   }
 }
 
 void EnjoyRemote::printFrame(byte* frame) {
-  for (byte i = 0; i < 7; i++) {
+  for (byte i = 0; i < 8; i++) {
     if (frame[i] >> 4 == 0) { //  Displays leading zero in case the most significant
       Serial.print("0"); // nibble is a 0.
     }
@@ -56,23 +57,24 @@ void EnjoyRemote::printFrame(byte* frame) {
 
 void EnjoyRemote::buildFrame(byte* frame, EnjoyCommand command, uint8_t code, uint8_t selectedBlind, bool multicast) {
   const byte button = static_cast<byte>(command);
+  frame[0] = 0; // Always 0
   if (multicast) {
-    frame[0] = 0x0f;
+    frame[1] = 0x0f;
   } else {
-    frame[0] = 0x1 << selectedBlind; // Channels Mask
+    frame[1] = 0x1 << selectedBlind; // Channels Mask
   }
-  frame[1] = (button << 4) | ((remoteId & 0xf00) >> 8); // Which button did  you press? The last 4 bits are the first 4 bits of the remote address
-  frame[2] = remoteId & 0xff; // remaining address of the remote
-  frame[3] = 0; // No idea, reserved for more addresses maybe?
-  frame[4] = selectedBlind; // Selected Blind, either 0, 1, 2 or 3
+  frame[2] = (button << 4) | ((remoteId & 0xf00) >> 8); // Which button did  you press? The last 4 bits are the first 4 bits of the remote address
+  frame[3] = remoteId & 0xff; // remaining address of the remote
+  frame[4] = 0; // No idea, reserved for more addresses maybe?
+  frame[5] = selectedBlind; // Selected Blind, either 0, 1, 2 or 3
 
-  int xor_value = (frame[1] & 0xf0) | (frame[4] ^ 0x01);
-  frame[5] = xor_value ^ code; // Remote address
+  int xor_value = (frame[2] & 0xf0) | (frame[5] ^ 0x01);
+  frame[6] = xor_value ^ code; // Remote address
 
   // remainder calculation: CRC8 with 0x80 polynomial
   uint8_t remainder = 0x00;
   unsigned byte, bit;
-  for (byte = 0; byte < 6; ++byte) {
+  for (byte = 0; byte < 7; ++byte) {
     remainder ^= frame[byte];
     for (bit = 0; bit < 8; ++bit) {
       if (remainder & 0x80) {
@@ -83,7 +85,7 @@ void EnjoyRemote::buildFrame(byte* frame, EnjoyCommand command, uint8_t code, ui
     }
   }
 
-  frame[6] = remainder; // CRC8 of previous bytes
+  frame[7] = remainder; // CRC8 of previous bytes
 
 #ifdef DEBUG
   Serial.printf("Counter: 0x%2x\n", code);
@@ -93,30 +95,27 @@ void EnjoyRemote::buildFrame(byte* frame, EnjoyCommand command, uint8_t code, ui
 }
 
 void EnjoyRemote::sendFrame(byte* frame, bool first) {
-  int nSyncs = 23;
+  int nSyncs = 24;
   if (first) { // The syncs are longer only with the first frame.
-    nSyncs = 60;
+    nSyncs = 64;
   }
 
   // Hardware sync: 64 syncs for the first frame, 24 for the following ones.
+  sendHigh(370);
+  sendLow(2500);
   for (int i = 0; i < nSyncs; i++) {
-    sendHigh(ENJOY_SYMBOL_US);
-    sendLow(ENJOY_SYMBOL_US);
+    sendLow(400);
+    sendHigh(400);
   }
 
   // Software sync
-  sendLow(4000-ENJOY_SYMBOL_US);
-  sendHigh(ENJOY_SYMBOL_US);
-  sendLow(830-ENJOY_SYMBOL_US);
-
-  for (byte i = 0; i < 7; i++) {
-    sendLow(ENJOY_SYMBOL_US);
-    sendHigh(ENJOY_SYMBOL_US);
-  }
+  sendLow(4000);
+  sendHigh(400);
+  sendLow(400);
 
   // Data: bits are sent one by one, starting with the MSB.
   // With G.E. Thomas convention of Manchester Encoding (0 is a transition from low to high)
-  for (byte i = 0; i < 56; i++) {
+  for (byte i = 0; i < 64; i++) {
     if (((frame[i / 8] >> (7 - (i % 8))) & 1) == 0) {
       sendLow(ENJOY_SYMBOL_US);
       sendHigh(ENJOY_SYMBOL_US);
