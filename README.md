@@ -12,9 +12,9 @@ For the CC1101 module the [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/
 
 ### Usage
 
-I have included two use cases for the library:
-1. A "command line interface" (CLI) to send commands by writing to the serial port: [cliCC1101](examples/cliCC1101/)
-2. An ESPHome configuration to easily integrate it on Home Assistant: [esphomeConfigs](examples/esphomeConfigs/)
+I have written two use cases for the library:
+1. A "command line interface" (CLI) to send commands by writing to the serial port, here on the same repo: [cliCC1101](examples/cliCC1101/)
+2. An ESPHome configuration to easily integrate it on Home Assistant, available on another repo: [esphome-configs](https://github.com/markstor/esphome-configs/)
 
 I am using a ESP32 dev board together with a CC1101 chip in the board E07-M1101D. The connections used by default in all the examples are:
 
