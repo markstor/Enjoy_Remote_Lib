@@ -7,16 +7,26 @@ Because it is a Arduino Library it can easily included in existing projects or u
 
 ### Hardware Requirements
 
-For this library to work you need an 433.92 Mhz RF transmitter. I have only tested it with a CC1101 module, I recommned it because there is a lot of other projects that use it, and it can be tuned to other frequencies as well.
-For the CC1101 module the [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib) must be installed.
+For this library to work you need an ESP32 with a 433.92 MHz RF transmitter. Two hardware options are supported:
+
+| Option | Board | RF Module | Notes |
+|--------|-------|-----------|-------|
+| **CC1101** | ESP32 dev board | E07-M1101D (CC1101) | Requires external wiring |
+| **TTGO T3** | LILYGO T3 LoRa32 V1.6.1 | SX1276/SX1278 (built-in) | All-in-one with OLED display |
 
 ### Usage
 
-I have written two use cases for the library:
-1. A "command line interface" (CLI) to send commands by writing to the serial port, here on the same repo: [cliCC1101](examples/cliCC1101/)
-2. An ESPHome configuration to easily integrate it on Home Assistant, available on another repo: [esphome-configs](https://github.com/markstor/esphome-configs/)
+Three examples are available:
 
-I am using a ESP32 dev board together with a CC1101 chip in the board E07-M1101D. The connections used by default in all the examples are:
+1. **[cliCC1101](examples/cliCC1101/)** - Command line interface for CC1101 module (Arduino/PlatformIO)
+2. **[esphome-sx127x](examples/esphome-sx127x/)** - ESPHome config for TTGO T3 LoRa32 with Home Assistant integration, position tracking, and OLED display
+3. **[esphome-configs](https://github.com/markstor/esphome-configs/)** - ESPHome config for CC1101 module (external repo)
+
+---
+
+### CC1101 Wiring
+
+For ESP32 dev board with CC1101 module (E07-M1101D):
 
 | ESP32 board | CC1101 module (E07-M1101D) |
 |-------------|----------------------------|
@@ -28,6 +38,20 @@ I am using a ESP32 dev board together with a CC1101 chip in the board E07-M1101D
 | D18         | 5 (SCK)                    |
 | D19         | 7 (MISO)                   |
 | D23         | 6 (MOSI)                   |
+
+For the CC1101 module, the [SmartRC-CC1101-Driver-Lib](https://github.com/LSatan/SmartRC-CC1101-Driver-Lib) must be installed.
+
+### TTGO T3 LoRa32
+
+The TTGO T3 LoRa32 V1.6.1 (433MHz variant) is an all-in-one solution with built-in LoRa transceiver and OLED display. No external wiring required - just flash and go.
+
+See [examples/esphome-sx127x](examples/esphome-sx127x/) for the ESPHome configuration with:
+- 4 blind cover entities with position slider (0-100%)
+- Configurable open/close timing per blind
+- Rolling code sensor
+- OLED status display
+
+---
 
 #### Rolling Code Storage
 

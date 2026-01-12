@@ -1,0 +1,915 @@
+esphome:
+  name: ttgo-enjoy
+
+esp32:
+  board: ttgo-lora32-v21
+  framework:
+    type: arduino
+
+# SPI for LoRa radio
+spi:
+  clk_pin: GPIO5
+  mosi_pin: GPIO27
+  miso_pin: GPIO19
+
+# SX127x radio in OOK continuous mode
+sx127x:
+  id: lora_radio
+  cs_pin: GPIO18
+  rst_pin: GPIO23
+  frequency: 433920000
+  modulation: OOK
+  packet_mode: false
+  bitsync: false
+  shaping: NONE
+  bandwidth: 50_0kHz
+  bitrate: 10000
+  pa_pin: BOOST
+  pa_power: 10
+  rx_start: false
+
+# Remote transmitter - mode switching with clean DIO2 state
+remote_transmitter:
+  id: rf_transmitter
+  pin: GPIO32
+  carrier_duty_percent: 100%
+  eot_level: false
+  on_transmit:
+    then:
+      - sx127x.set_mode_standby:
+          id: lora_radio
+      - remote_transmitter.digital_write:
+          transmitter_id: rf_transmitter
+          value: false
+      - sx127x.set_mode_tx:
+          id: lora_radio
+  on_complete:
+    then:
+      - sx127x.set_mode_standby:
+          id: lora_radio
+
+# I2C for OLED
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+
+# OLED Display - no reset pin needed
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    id: oled
+    lambda: |-
+      // Line 1: All blind positions
+      char line1[32];
+      snprintf(line1, sizeof(line1), "0:%d%% 1:%d%% 2:%d%% 3:%d%%",
+        (int)id(blind_0_position), (int)id(blind_1_position),
+        (int)id(blind_2_position), (int)id(blind_3_position));
+      it.print(0, 0, id(font1), line1);
+
+      // Line 2: Direction indicators
+      char dirs[16] = "    ";
+      if (id(blind_0_direction) == 1) dirs[0] = '^';
+      else if (id(blind_0_direction) == -1) dirs[0] = 'v';
+      if (id(blind_1_direction) == 1) dirs[1] = '^';
+      else if (id(blind_1_direction) == -1) dirs[1] = 'v';
+      if (id(blind_2_direction) == 1) dirs[2] = '^';
+      else if (id(blind_2_direction) == -1) dirs[2] = 'v';
+      if (id(blind_3_direction) == 1) dirs[3] = '^';
+      else if (id(blind_3_direction) == -1) dirs[3] = 'v';
+      it.printf(0, 16, id(font1), "Dir: %s", dirs);
+
+      // Line 3: Rolling code
+      it.printf(0, 32, id(font1), "Code: 0x%02X", id(rolling_code));
+
+font:
+  - file: "gfonts://Roboto"
+    id: font1
+    size: 12
+
+# ============== GLOBALS ==============
+
+globals:
+  # Rolling code (persisted)
+  - id: rolling_code
+    type: uint8_t
+    restore_value: yes
+    initial_value: '0'
+
+  # Currently selected blind for transmission
+  - id: selected_blind
+    type: uint8_t
+    restore_value: yes
+    initial_value: '0'
+
+  # Remote address
+  - id: remote_address
+    type: uint16_t
+    initial_value: !secret remote_address
+
+  # Blind 0 state
+  - id: blind_0_position
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: blind_0_direction
+    type: int
+    initial_value: '0'
+  - id: blind_0_start_time
+    type: uint32_t
+    initial_value: '0'
+  - id: blind_0_start_position
+    type: float
+    initial_value: '0.0'
+
+  # Blind 1 state
+  - id: blind_1_position
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: blind_1_direction
+    type: int
+    initial_value: '0'
+  - id: blind_1_start_time
+    type: uint32_t
+    initial_value: '0'
+  - id: blind_1_start_position
+    type: float
+    initial_value: '0.0'
+
+  # Blind 2 state
+  - id: blind_2_position
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: blind_2_direction
+    type: int
+    initial_value: '0'
+  - id: blind_2_start_time
+    type: uint32_t
+    initial_value: '0'
+  - id: blind_2_start_position
+    type: float
+    initial_value: '0.0'
+
+  # Blind 3 state
+  - id: blind_3_position
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: blind_3_direction
+    type: int
+    initial_value: '0'
+  - id: blind_3_start_time
+    type: uint32_t
+    initial_value: '0'
+  - id: blind_3_start_position
+    type: float
+    initial_value: '0.0'
+
+# ============== NUMBER INPUTS (Duration Config) ==============
+
+number:
+  # Blind 0
+  - platform: template
+    name: "Enjoy Blind 0 Open Duration"
+    id: blind_0_open_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 0 Close Duration"
+    id: blind_0_close_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+
+  # Blind 1
+  - platform: template
+    name: "Enjoy Blind 1 Open Duration"
+    id: blind_1_open_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 1 Close Duration"
+    id: blind_1_close_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+
+  # Blind 2
+  - platform: template
+    name: "Enjoy Blind 2 Open Duration"
+    id: blind_2_open_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 2 Close Duration"
+    id: blind_2_close_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+
+  # Blind 3
+  - platform: template
+    name: "Enjoy Blind 3 Open Duration"
+    id: blind_3_open_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 3 Close Duration"
+    id: blind_3_close_duration
+    min_value: 1
+    max_value: 120
+    step: 1
+    initial_value: 20
+    restore_value: yes
+    unit_of_measurement: "s"
+    optimistic: true
+
+# ============== SWITCHES (Invert) ==============
+
+switch:
+  - platform: template
+    name: "Enjoy Blind 0 Invert"
+    id: blind_0_invert
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 1 Invert"
+    id: blind_1_invert
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 2 Invert"
+    id: blind_2_invert
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+  - platform: template
+    name: "Enjoy Blind 3 Invert"
+    id: blind_3_invert
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+
+# ============== SENSORS ==============
+
+sensor:
+  - platform: template
+    name: "Enjoy Rolling Code"
+    id: rolling_code_sensor
+    lambda: 'return id(rolling_code);'
+    update_interval: 1h
+    accuracy_decimals: 0
+
+# ============== POSITION UPDATE INTERVAL ==============
+
+interval:
+  - interval: 500ms
+    then:
+      - lambda: |-
+          uint32_t now = millis();
+
+          // Update Blind 0
+          if (id(blind_0_direction) != 0) {
+            float elapsed = (now - id(blind_0_start_time)) / 1000.0;
+            float duration = id(blind_0_direction) == 1 ?
+              id(blind_0_open_duration).state : id(blind_0_close_duration).state;
+            float delta = (elapsed / duration) * 100.0;
+            float new_pos = id(blind_0_start_position) + (id(blind_0_direction) * delta);
+            if (new_pos < 0) new_pos = 0;
+            if (new_pos > 100) new_pos = 100;
+            id(blind_0_position) = new_pos;
+
+            // Auto-stop at limits
+            if (new_pos <= 0 || new_pos >= 100) {
+              id(blind_0_direction) = 0;
+            }
+          }
+
+          // Update Blind 1
+          if (id(blind_1_direction) != 0) {
+            float elapsed = (now - id(blind_1_start_time)) / 1000.0;
+            float duration = id(blind_1_direction) == 1 ?
+              id(blind_1_open_duration).state : id(blind_1_close_duration).state;
+            float delta = (elapsed / duration) * 100.0;
+            float new_pos = id(blind_1_start_position) + (id(blind_1_direction) * delta);
+            if (new_pos < 0) new_pos = 0;
+            if (new_pos > 100) new_pos = 100;
+            id(blind_1_position) = new_pos;
+            if (new_pos <= 0 || new_pos >= 100) {
+              id(blind_1_direction) = 0;
+            }
+          }
+
+          // Update Blind 2
+          if (id(blind_2_direction) != 0) {
+            float elapsed = (now - id(blind_2_start_time)) / 1000.0;
+            float duration = id(blind_2_direction) == 1 ?
+              id(blind_2_open_duration).state : id(blind_2_close_duration).state;
+            float delta = (elapsed / duration) * 100.0;
+            float new_pos = id(blind_2_start_position) + (id(blind_2_direction) * delta);
+            if (new_pos < 0) new_pos = 0;
+            if (new_pos > 100) new_pos = 100;
+            id(blind_2_position) = new_pos;
+            if (new_pos <= 0 || new_pos >= 100) {
+              id(blind_2_direction) = 0;
+            }
+          }
+
+          // Update Blind 3
+          if (id(blind_3_direction) != 0) {
+            float elapsed = (now - id(blind_3_start_time)) / 1000.0;
+            float duration = id(blind_3_direction) == 1 ?
+              id(blind_3_open_duration).state : id(blind_3_close_duration).state;
+            float delta = (elapsed / duration) * 100.0;
+            float new_pos = id(blind_3_start_position) + (id(blind_3_direction) * delta);
+            if (new_pos < 0) new_pos = 0;
+            if (new_pos > 100) new_pos = 100;
+            id(blind_3_position) = new_pos;
+            if (new_pos <= 0 || new_pos >= 100) {
+              id(blind_3_direction) = 0;
+            }
+          }
+      - component.update: oled
+
+# ============== SCRIPTS ==============
+
+script:
+  # Main RF transmission script
+  - id: send_enjoy_command
+    parameters:
+      command: uint8_t
+      repeat_count: int
+    then:
+      - lambda: |-
+          id(rolling_code) = id(rolling_code) + 1;
+      - remote_transmitter.transmit_raw:
+          transmitter_id: rf_transmitter
+          code: !lambda |-
+            uint8_t cmd = command;
+            int repeats = repeat_count;
+            uint8_t blind = id(selected_blind);
+            uint16_t addr = id(remote_address);
+            uint8_t code = id(rolling_code);
+
+            uint8_t frame[8];
+            frame[0] = 0;
+            frame[1] = 0x1 << blind;
+            frame[2] = (cmd << 4) | ((addr >> 8) & 0x0F);
+            frame[3] = addr & 0xFF;
+            frame[4] = 0;
+            frame[5] = blind;
+            frame[6] = ((frame[2] & 0xF0) | (frame[5] ^ 0x01)) ^ code;
+
+            uint8_t crc = 0;
+            for (int b = 0; b < 7; b++) {
+              crc ^= frame[b];
+              for (int bit = 0; bit < 8; bit++) {
+                crc = (crc & 0x80) ? ((crc << 1) ^ 0x07) : (crc << 1);
+              }
+            }
+            frame[7] = crc;
+
+            std::vector<int32_t> raw;
+            raw.reserve(261 + repeats * 179);
+
+            auto add_data_bits = [&]() {
+              for (int i = 0; i < 64; i++) {
+                int byteIdx = i / 8;
+                int bitIdx = 7 - (i % 8);
+                bool bit = (frame[byteIdx] >> bitIdx) & 1;
+                if (bit == 0) {
+                  raw.push_back(-418);
+                  raw.push_back(418);
+                } else {
+                  raw.push_back(418);
+                  raw.push_back(-418);
+                }
+              }
+            };
+
+            raw.push_back(370);
+            raw.push_back(-2500);
+            for (int i = 0; i < 64; i++) {
+              raw.push_back(-400);
+              raw.push_back(400);
+            }
+            raw.push_back(-4000);
+            raw.push_back(400);
+            raw.push_back(-400);
+            add_data_bits();
+
+            for (int r = 0; r < repeats; r++) {
+              raw.push_back(-26800);
+              raw.push_back(370);
+              raw.push_back(-2500);
+              for (int i = 0; i < 24; i++) {
+                raw.push_back(-400);
+                raw.push_back(400);
+              }
+              raw.push_back(-4000);
+              raw.push_back(400);
+              raw.push_back(-400);
+              add_data_bits();
+            }
+
+            return raw;
+      - component.update: rolling_code_sensor
+      - component.update: oled
+
+  # Calibration scripts
+  - id: calibrate_blind_0
+    then:
+      - globals.set:
+          id: selected_blind
+          value: '0'
+      - lambda: |-
+          uint8_t up_cmd = id(blind_0_invert).state ? 2 : 8;
+          uint8_t down_cmd = id(blind_0_invert).state ? 8 : 2;
+          id(selected_blind) = 0;
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_0_invert).state ? 2 : 8;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_0_open_duration).state * 1000;'
+      - lambda: 'id(blind_0_position) = 100.0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_0_invert).state ? 8 : 2;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_0_close_duration).state * 1000;'
+      - lambda: 'id(blind_0_position) = 0.0;'
+      - component.update: oled
+
+  - id: calibrate_blind_1
+    then:
+      - globals.set:
+          id: selected_blind
+          value: '1'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_1_invert).state ? 2 : 8;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_1_open_duration).state * 1000;'
+      - lambda: 'id(blind_1_position) = 100.0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_1_invert).state ? 8 : 2;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_1_close_duration).state * 1000;'
+      - lambda: 'id(blind_1_position) = 0.0;'
+      - component.update: oled
+
+  - id: calibrate_blind_2
+    then:
+      - globals.set:
+          id: selected_blind
+          value: '2'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_2_invert).state ? 2 : 8;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_2_open_duration).state * 1000;'
+      - lambda: 'id(blind_2_position) = 100.0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_2_invert).state ? 8 : 2;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_2_close_duration).state * 1000;'
+      - lambda: 'id(blind_2_position) = 0.0;'
+      - component.update: oled
+
+  - id: calibrate_blind_3
+    then:
+      - globals.set:
+          id: selected_blind
+          value: '3'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_3_invert).state ? 2 : 8;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_3_open_duration).state * 1000;'
+      - lambda: 'id(blind_3_position) = 100.0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_3_invert).state ? 8 : 2;'
+          repeat_count: 0
+      - delay: !lambda 'return id(blind_3_close_duration).state * 1000;'
+      - lambda: 'id(blind_3_position) = 0.0;'
+      - component.update: oled
+
+# ============== COVERS ==============
+
+cover:
+  - platform: template
+    name: "Enjoy Blind 0"
+    id: enjoy_blind_0
+    device_class: blind
+    assumed_state: true
+    has_position: true
+    lambda: 'return id(blind_0_position) / 100.0;'
+    open_action:
+      - globals.set:
+          id: selected_blind
+          value: '0'
+      - lambda: |-
+          id(blind_0_direction) = 1;
+          id(blind_0_start_time) = millis();
+          id(blind_0_start_position) = id(blind_0_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_0_invert).state ? 2 : 8;'
+          repeat_count: 0
+    close_action:
+      - globals.set:
+          id: selected_blind
+          value: '0'
+      - lambda: |-
+          id(blind_0_direction) = -1;
+          id(blind_0_start_time) = millis();
+          id(blind_0_start_position) = id(blind_0_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_0_invert).state ? 8 : 2;'
+          repeat_count: 0
+    stop_action:
+      - globals.set:
+          id: selected_blind
+          value: '0'
+      - lambda: 'id(blind_0_direction) = 0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+    position_action:
+      - lambda: |-
+          float target = pos * 100.0;
+          float current = id(blind_0_position);
+          float diff = target - current;
+
+          if (abs(diff) < 2) return;  // Already at position
+
+          id(selected_blind) = 0;
+          id(blind_0_start_position) = current;
+          id(blind_0_start_time) = millis();
+
+          if (diff > 0) {
+            id(blind_0_direction) = 1;
+          } else {
+            id(blind_0_direction) = -1;
+          }
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda |-
+            float target = pos * 100.0;
+            float current = id(blind_0_position);
+            bool opening = target > current;
+            if (id(blind_0_invert).state) opening = !opening;
+            return opening ? 8 : 2;
+          repeat_count: 0
+      - delay: !lambda |-
+          float target = pos * 100.0;
+          float current = id(blind_0_position);
+          float diff = abs(target - current);
+          float duration = (target > current) ?
+            id(blind_0_open_duration).state : id(blind_0_close_duration).state;
+          return (diff / 100.0) * duration * 1000;
+      - lambda: |-
+          id(blind_0_direction) = 0;
+          id(blind_0_position) = pos * 100.0;
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+
+  - platform: template
+    name: "Enjoy Blind 1"
+    id: enjoy_blind_1
+    device_class: blind
+    assumed_state: true
+    has_position: true
+    lambda: 'return id(blind_1_position) / 100.0;'
+    open_action:
+      - globals.set:
+          id: selected_blind
+          value: '1'
+      - lambda: |-
+          id(blind_1_direction) = 1;
+          id(blind_1_start_time) = millis();
+          id(blind_1_start_position) = id(blind_1_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_1_invert).state ? 2 : 8;'
+          repeat_count: 0
+    close_action:
+      - globals.set:
+          id: selected_blind
+          value: '1'
+      - lambda: |-
+          id(blind_1_direction) = -1;
+          id(blind_1_start_time) = millis();
+          id(blind_1_start_position) = id(blind_1_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_1_invert).state ? 8 : 2;'
+          repeat_count: 0
+    stop_action:
+      - globals.set:
+          id: selected_blind
+          value: '1'
+      - lambda: 'id(blind_1_direction) = 0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+    position_action:
+      - lambda: |-
+          float target = pos * 100.0;
+          float current = id(blind_1_position);
+          float diff = target - current;
+          if (abs(diff) < 2) return;
+          id(selected_blind) = 1;
+          id(blind_1_start_position) = current;
+          id(blind_1_start_time) = millis();
+          id(blind_1_direction) = diff > 0 ? 1 : -1;
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda |-
+            float target = pos * 100.0;
+            float current = id(blind_1_position);
+            bool opening = target > current;
+            if (id(blind_1_invert).state) opening = !opening;
+            return opening ? 8 : 2;
+          repeat_count: 0
+      - delay: !lambda |-
+          float target = pos * 100.0;
+          float current = id(blind_1_position);
+          float diff = abs(target - current);
+          float duration = (target > current) ?
+            id(blind_1_open_duration).state : id(blind_1_close_duration).state;
+          return (diff / 100.0) * duration * 1000;
+      - lambda: |-
+          id(blind_1_direction) = 0;
+          id(blind_1_position) = pos * 100.0;
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+
+  - platform: template
+    name: "Enjoy Blind 2"
+    id: enjoy_blind_2
+    device_class: blind
+    assumed_state: true
+    has_position: true
+    lambda: 'return id(blind_2_position) / 100.0;'
+    open_action:
+      - globals.set:
+          id: selected_blind
+          value: '2'
+      - lambda: |-
+          id(blind_2_direction) = 1;
+          id(blind_2_start_time) = millis();
+          id(blind_2_start_position) = id(blind_2_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_2_invert).state ? 2 : 8;'
+          repeat_count: 0
+    close_action:
+      - globals.set:
+          id: selected_blind
+          value: '2'
+      - lambda: |-
+          id(blind_2_direction) = -1;
+          id(blind_2_start_time) = millis();
+          id(blind_2_start_position) = id(blind_2_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_2_invert).state ? 8 : 2;'
+          repeat_count: 0
+    stop_action:
+      - globals.set:
+          id: selected_blind
+          value: '2'
+      - lambda: 'id(blind_2_direction) = 0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+    position_action:
+      - lambda: |-
+          float target = pos * 100.0;
+          float current = id(blind_2_position);
+          float diff = target - current;
+          if (abs(diff) < 2) return;
+          id(selected_blind) = 2;
+          id(blind_2_start_position) = current;
+          id(blind_2_start_time) = millis();
+          id(blind_2_direction) = diff > 0 ? 1 : -1;
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda |-
+            float target = pos * 100.0;
+            float current = id(blind_2_position);
+            bool opening = target > current;
+            if (id(blind_2_invert).state) opening = !opening;
+            return opening ? 8 : 2;
+          repeat_count: 0
+      - delay: !lambda |-
+          float target = pos * 100.0;
+          float current = id(blind_2_position);
+          float diff = abs(target - current);
+          float duration = (target > current) ?
+            id(blind_2_open_duration).state : id(blind_2_close_duration).state;
+          return (diff / 100.0) * duration * 1000;
+      - lambda: |-
+          id(blind_2_direction) = 0;
+          id(blind_2_position) = pos * 100.0;
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+
+  - platform: template
+    name: "Enjoy Blind 3"
+    id: enjoy_blind_3
+    device_class: blind
+    assumed_state: true
+    has_position: true
+    lambda: 'return id(blind_3_position) / 100.0;'
+    open_action:
+      - globals.set:
+          id: selected_blind
+          value: '3'
+      - lambda: |-
+          id(blind_3_direction) = 1;
+          id(blind_3_start_time) = millis();
+          id(blind_3_start_position) = id(blind_3_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_3_invert).state ? 2 : 8;'
+          repeat_count: 0
+    close_action:
+      - globals.set:
+          id: selected_blind
+          value: '3'
+      - lambda: |-
+          id(blind_3_direction) = -1;
+          id(blind_3_start_time) = millis();
+          id(blind_3_start_position) = id(blind_3_position);
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda 'return id(blind_3_invert).state ? 8 : 2;'
+          repeat_count: 0
+    stop_action:
+      - globals.set:
+          id: selected_blind
+          value: '3'
+      - lambda: 'id(blind_3_direction) = 0;'
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+    position_action:
+      - lambda: |-
+          float target = pos * 100.0;
+          float current = id(blind_3_position);
+          float diff = target - current;
+          if (abs(diff) < 2) return;
+          id(selected_blind) = 3;
+          id(blind_3_start_position) = current;
+          id(blind_3_start_time) = millis();
+          id(blind_3_direction) = diff > 0 ? 1 : -1;
+      - script.execute:
+          id: send_enjoy_command
+          command: !lambda |-
+            float target = pos * 100.0;
+            float current = id(blind_3_position);
+            bool opening = target > current;
+            if (id(blind_3_invert).state) opening = !opening;
+            return opening ? 8 : 2;
+          repeat_count: 0
+      - delay: !lambda |-
+          float target = pos * 100.0;
+          float current = id(blind_3_position);
+          float diff = abs(target - current);
+          float duration = (target > current) ?
+            id(blind_3_open_duration).state : id(blind_3_close_duration).state;
+          return (diff / 100.0) * duration * 1000;
+      - lambda: |-
+          id(blind_3_direction) = 0;
+          id(blind_3_position) = pos * 100.0;
+      - script.execute:
+          id: send_enjoy_command
+          command: 4
+          repeat_count: 0
+
+# ============== BUTTONS ==============
+
+button:
+  # Prog buttons
+  - platform: template
+    name: "Enjoy Prog Blind 0"
+    on_press:
+      - globals.set:
+          id: selected_blind
+          value: '0'
+      - script.execute:
+          id: send_enjoy_command
+          command: 1
+          repeat_count: 0
+  - platform: template
+    name: "Enjoy Prog Blind 1"
+    on_press:
+      - globals.set:
+          id: selected_blind
+          value: '1'
+      - script.execute:
+          id: send_enjoy_command
+          command: 1
+          repeat_count: 0
+  - platform: template
+    name: "Enjoy Prog Blind 2"
+    on_press:
+      - globals.set:
+          id: selected_blind
+          value: '2'
+      - script.execute:
+          id: send_enjoy_command
+          command: 1
+          repeat_count: 0
+  - platform: template
+    name: "Enjoy Prog Blind 3"
+    on_press:
+      - globals.set:
+          id: selected_blind
+          value: '3'
+      - script.execute:
+          id: send_enjoy_command
+          command: 1
+          repeat_count: 0
+
+  # Calibrate buttons
+  - platform: template
+    name: "Enjoy Calibrate Blind 0"
+    on_press:
+      - script.execute: calibrate_blind_0
+  - platform: template
+    name: "Enjoy Calibrate Blind 1"
+    on_press:
+      - script.execute: calibrate_blind_1
+  - platform: template
+    name: "Enjoy Calibrate Blind 2"
+    on_press:
+      - script.execute: calibrate_blind_2
+  - platform: template
+    name: "Enjoy Calibrate Blind 3"
+    on_press:
+      - script.execute: calibrate_blind_3
+
+# ============== WIFI, API, OTA ==============
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+
+logger:
+  level: DEBUG

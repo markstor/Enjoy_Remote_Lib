@@ -1,0 +1,8 @@
+# ESPHome build artifacts
+/.esphome/
+
+# Secrets (contains WiFi passwords, API keys)
+/secrets.yaml
+
+# Python virtual environment
+/venv/
